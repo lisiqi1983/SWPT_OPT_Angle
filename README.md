@@ -100,6 +100,16 @@ this form:
 https://<github-user>.github.io/<repository-name>/
 ```
 
+For this repository, the expected project-site URL is:
+
+```text
+https://lisiqi1983.github.io/SWPT_OPT_Angle/
+```
+
+If the repository is private, GitHub Pages availability depends on the GitHub
+plan. For a public open-source release on GitHub Free, make the repository
+public before enabling Pages.
+
 ## Rebuild From Source
 
 Install Rust only when changing the Rust source code or regenerating `web/pkg`:
