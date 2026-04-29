@@ -1,0 +1,21 @@
+[package]
+name = "swpt_core"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Fast SWPT eddy-current loss and optimal operating angle calculator"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+console_error_panic_hook = "0.1"
+js-sys = "0.3"
+libm = "0.2"
+ndarray = "0.16"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+wasm-bindgen = "0.2"
+
+[dev-dependencies]
+serde_json = "1"

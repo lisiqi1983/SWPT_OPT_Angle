@@ -1,0 +1,33 @@
+{
+  "eddy": {
+    "frequencyHz": 200000,
+    "conductivitySPerM": 4,
+    "relativePermittivity": 81,
+    "coilRadiusM": 0.2,
+    "turns": 14,
+    "turnSpacingM": 0.011,
+    "coilGapM": 0.12,
+    "seawaterRadiusM": 0.35,
+    "sideHeightM": 0.48,
+    "nRho": 64,
+    "nZ": 64,
+    "autoLambdaGrid": true,
+    "nLambda": 640,
+    "lambdaMax": 1000
+  },
+  "circuit": {
+    "frequencyHz": 200000,
+    "autoEstimateMutualInductance": true,
+    "transferredPowerW": 1000,
+    "filterInductanceH": 0.000015,
+    "mutualInductanceH": 0.000002,
+    "coilResistanceOhm": 0.3,
+    "filterResistanceOhm": 0.07,
+    "parallelCapResistanceOhm": 0.05,
+    "seriesCapResistanceOhm": 0.05,
+    "mosfetRdsonOhm": 0.045
+  },
+  "options": {
+    "sampleCount": 241
+  }
+}

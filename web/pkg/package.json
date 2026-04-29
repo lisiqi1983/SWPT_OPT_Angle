@@ -1,0 +1,17 @@
+{
+  "name": "swpt_core",
+  "type": "module",
+  "description": "Fast SWPT eddy-current loss and optimal operating angle calculator",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "files": [
+    "swpt_core_bg.wasm",
+    "swpt_core.js",
+    "swpt_core.d.ts"
+  ],
+  "main": "swpt_core.js",
+  "types": "swpt_core.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

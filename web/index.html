@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SWPT Optimal Operating Angle Calculator</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div>
+          <span class="eyebrow">Rust + WebAssembly</span>
+          <h1>SWPT Optimal Operating Angle</h1>
+        </div>
+        <div id="status" class="status">Loading WASM...</div>
+      </div>
+
+      <section class="panel">
+        <h2>Operating Point</h2>
+        <div class="field-grid">
+          <label>Frequency kHz<input id="frequencyKHz" type="number" value="200" min="1" step="1"></label>
+          <label>Target Transfer Power W<input id="powerW" type="number" value="1000" min="1" step="50"></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Seawater And Coils</h2>
+        <div class="field-grid">
+          <label>Conductivity S/m<input id="conductivity" type="number" value="4" min="0.001" step="0.1"></label>
+          <label>Relative Permittivity<input id="epsilonR" type="number" value="81" min="1" step="1"></label>
+          <label>Outer Coil Radius m<input id="coilRadius" type="number" value="0.2" min="0.001" step="0.001"></label>
+          <label>Turns<input id="turns" type="number" value="14" min="1" step="1"></label>
+          <label>Turn Spacing mm<input id="turnSpacingMm" type="number" value="11" min="0.01" step="0.1"></label>
+          <label>Coil Gap m<input id="coilGap" type="number" value="0.12" min="0.001" step="0.001"></label>
+          <label>Integration Radius m<input id="seaRadius" type="number" value="0.35" min="0.001" step="0.001"></label>
+          <label>One-Side Region Height m<input id="sideHeight" type="number" value="0.48" min="0.001" step="0.001"></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>LCC Network And Devices</h2>
+        <div class="field-grid">
+          <label>Lf uH<input id="lfUh" type="number" value="15" min="0.001" step="0.1"></label>
+          <label>M uH<input id="mUh" type="number" value="2" min="0.001" step="0.1"></label>
+          <label class="switch-field field-wide" data-tip="Estimate mutual inductance from coil radius, turns, turn spacing, and coil gap. Turn this off when you have a measured or FEM-extracted M value.">
+            <input id="autoM" type="checkbox" checked>
+            <span class="switch-track" aria-hidden="true"></span>
+            <span class="switch-copy">
+              <span class="switch-title">Mutual Inductance Mode</span>
+              <span id="autoMMode" class="switch-detail">Geometry estimate</span>
+            </span>
+          </label>
+          <label>Coil Resistance Ohm<input id="coilR" type="number" value="0.3" min="0" step="0.01"></label>
+          <label>Lf ESR Ohm<input id="filterR" type="number" value="0.07" min="0" step="0.01"></label>
+          <label>Cf ESR Ohm<input id="rcf" type="number" value="0.05" min="0" step="0.01"></label>
+          <label>Series C ESR Ohm<input id="rc" type="number" value="0.05" min="0" step="0.01"></label>
+          <label>Rdson Ohm<input id="rdson" type="number" value="0.045" min="0" step="0.005"></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Numerical Grid</h2>
+        <div class="field-grid">
+          <label>rho Samples<input id="nRho" type="number" value="64" min="8" max="300" step="8"></label>
+          <label>z Samples<input id="nZ" type="number" value="64" min="8" max="300" step="8"></label>
+          <label class="switch-field field-wide" data-tip="Choose lambdaMax and nLambda from the coil geometry and integration radius to avoid under-sampling the oscillatory Bessel kernel. Turn this off for convergence studies.">
+            <input id="autoLambdaGrid" type="checkbox" checked>
+            <span class="switch-track" aria-hidden="true"></span>
+            <span class="switch-copy">
+              <span class="switch-title">Lambda Grid Mode</span>
+              <span id="autoLambdaMode" class="switch-detail">Recommended grid</span>
+            </span>
+          </label>
+          <label>lambda Samples<input id="nLambda" type="number" value="640" min="40" max="6000" step="40"></label>
+          <label>lambda Max<input id="lambdaMax" type="number" value="1000" min="10" step="10"></label>
+        </div>
+      </section>
+
+      <button id="runButton" type="button" disabled>Run Full Calculation</button>
+    </aside>
+
+    <section class="workspace">
+      <div class="hero">
+        <div>
+          <span class="eyebrow">Optimal operating angle</span>
+          <h2 id="thetaValue">--</h2>
+          <p id="summaryText">Waiting for calculation.</p>
+        </div>
+        <div class="hero-metrics">
+          <div><span>Efficiency</span><strong id="efficiencyValue">--</strong></div>
+          <div><span>Total Loss</span><strong id="lossValue">--</strong></div>
+          <div><span>Compute Time</span><strong id="timeValue">--</strong></div>
+        </div>
+      </div>
+
+      <div class="comparison">
+        <div class="comparison-card">
+          <span>θ = 90°</span>
+          <strong id="eff90">--</strong>
+        </div>
+        <div class="comparison-card accent">
+          <span>Optimized</span>
+          <strong id="effOpt">--</strong>
+        </div>
+        <div class="comparison-card">
+          <span>Efficiency Gain</span>
+          <strong id="gainValue">--</strong>
+        </div>
+        <div class="comparison-card">
+          <span>Required AC RMS Voltage</span>
+          <strong id="voltageValue">--</strong>
+        </div>
+        <div class="comparison-card">
+          <span>Mutual Inductance Used</span>
+          <strong id="mutualValue">--</strong>
+        </div>
+        <div class="comparison-card">
+          <span>Lambda Grid Used</span>
+          <strong id="lambdaGridValue">--</strong>
+        </div>
+      </div>
+
+      <section class="panel output-panel">
+        <div class="panel-title">
+          <h2>Loss Share</h2>
+          <span>Percentage of total loss</span>
+        </div>
+        <div id="lossBars" class="loss-bars"></div>
+      </section>
+
+      <div class="chart-grid">
+        <section class="panel chart-panel">
+          <h2>Efficiency vs. Angle</h2>
+          <canvas id="efficiencyChart"></canvas>
+        </section>
+        <section class="panel chart-panel">
+          <h2>Seawater Eddy Loss Share</h2>
+          <canvas id="eddyChart"></canvas>
+        </section>
+      </div>
+
+      <div class="table-grid">
+        <section class="panel">
+          <h2>ABCD Coefficients</h2>
+          <table>
+            <thead><tr><th>Term</th><th>Value</th><th>Meaning</th></tr></thead>
+            <tbody id="coeffRows"></tbody>
+          </table>
+        </section>
+        <section class="panel">
+          <h2>Loss Breakdown</h2>
+          <table>
+            <thead><tr><th>Loss Term</th><th>W</th><th>Input Power Share</th></tr></thead>
+            <tbody id="lossRows"></tbody>
+          </table>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
