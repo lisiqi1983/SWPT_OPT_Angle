@@ -179,7 +179,7 @@ function render(result) {
   document.getElementById("timeValue").textContent = ms(result.timingsMs.total);
   document.getElementById("eff90").textContent = pct(at90.efficiencyPct);
   document.getElementById("effOpt").textContent = pct(loss.efficiencyPct);
-  document.getElementById("gainValue").textContent = `${gain >= 0 ? "+" : ""}${fmt(gain, 3)} pp`;
+  document.getElementById("gainValue").textContent = `Δη = ${gain >= 0 ? "+" : ""}${fmt(gain, 2)}%`;
   document.getElementById("voltageValue").textContent = `${fmt(loss.requiredAcVoltageRmsV, 2)} V`;
   document.getElementById("mutualValue").textContent = `${fmt(result.usedMutualInductanceH * 1e6, 3)} uH`;
   document.getElementById("lambdaGridValue").textContent =

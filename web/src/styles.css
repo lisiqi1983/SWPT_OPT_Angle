@@ -385,6 +385,14 @@ button:disabled {
   line-height: 1.2;
 }
 
+.metric-note {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .comparison {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
