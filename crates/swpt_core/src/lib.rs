@@ -69,7 +69,7 @@ pub fn calculate_model(input: ModelInput) -> Result<CalculationResult, String> {
         used_mutual_inductance_h: circuit.mutual_inductance_h,
         notes: vec![
             "Coaxial symmetric-coil model.".to_string(),
-            "Loss values assume constant target transferred power.".to_string(),
+            "Loss values assume constant coil-to-coil transferred power.".to_string(),
             "Matrix acceleration uses ndarray for Hankel-kernel products.".to_string(),
         ],
     })
@@ -182,6 +182,7 @@ impl EddyParams {
 pub struct CircuitParams {
     pub frequency_hz: f64,
     pub auto_estimate_mutual_inductance: bool,
+    #[serde(alias = "inputPowerW")]
     pub transferred_power_w: f64,
     pub filter_inductance_h: f64,
     pub mutual_inductance_h: f64,
@@ -283,9 +284,13 @@ pub struct AngleSolution {
 pub struct LossBreakdown {
     pub theta_deg: f64,
     pub transferred_power_w: f64,
+    pub output_power_w: f64,
     pub required_ac_voltage_rms_v: f64,
+    pub coil_current_rms_a: f64,
     pub input_power_w: f64,
     pub total_loss_w: f64,
+    pub primary_loss_w: f64,
+    pub secondary_loss_w: f64,
     pub efficiency_pct: f64,
     pub coil_filter_loss_w: f64,
     pub capacitor_loss_w: f64,
@@ -639,28 +644,41 @@ fn loss_breakdown(theta: f64, c: &CircuitParams, e: &EddyCoefficients) -> LossBr
     let m = c.mutual_inductance_h;
     let sin_theta = theta.sin().max(1.0e-12);
     let cos_theta = theta.cos();
-    let p_trans = c.transferred_power_w;
-    let u2 = p_trans * omega * lf * lf / (m * sin_theta);
-    let u_rms = u2.sqrt();
-    let denom = omega * omega * lf.powi(4);
 
-    let coil_filter_loss =
-        2.0 * u2 * (lf * lf * c.coil_resistance_ohm + m * m * c.filter_resistance_ohm) / denom;
+    let transfer_coeff = omega * m * sin_theta;
+    let coil_filter_coeff =
+        2.0 * (lf * lf * c.coil_resistance_ohm + m * m * c.filter_resistance_ohm) / (lf * lf);
 
     let capacitor_numerator = (m * m + lf * lf + 2.0 * m * lf * cos_theta)
         * c.parallel_cap_resistance_ohm
         + c.series_cap_resistance_ohm * lf * lf;
-    let capacitor_loss = 2.0 * u2 * capacitor_numerator / denom;
+    let capacitor_coeff = 2.0 * capacitor_numerator / (lf * lf);
 
     let eddy_index = e.a + e.b * cos_theta + 2.0 * e.c + 2.0 * e.d * cos_theta;
-    let eddy_loss = u2 * eddy_index / (lf * lf * omega * omega);
+    let eddy_coeff = eddy_index;
 
-    let mosfet_loss = 4.0 * m * m * u2 * c.mosfet_rdson_ohm / denom;
+    let mosfet_coeff = 4.0 * m * m * c.mosfet_rdson_ohm / (lf * lf);
+    let p_trans_target = c.transferred_power_w;
+    let current_squared = if transfer_coeff > 0.0 && transfer_coeff.is_finite() {
+        p_trans_target / transfer_coeff
+    } else {
+        0.0
+    };
+    let coil_current_rms_a = current_squared.sqrt();
+    let u_rms = coil_current_rms_a * omega * lf;
 
+    let p_trans = current_squared * transfer_coeff;
+    let coil_filter_loss = current_squared * coil_filter_coeff;
+    let capacitor_loss = current_squared * capacitor_coeff;
+    let eddy_loss = current_squared * eddy_coeff;
+    let mosfet_loss = current_squared * mosfet_coeff;
     let total_loss = coil_filter_loss + capacitor_loss + eddy_loss + mosfet_loss;
-    let input_power = p_trans + total_loss;
+    let primary_loss = total_loss / 2.0;
+    let secondary_loss = total_loss / 2.0;
+    let input_power = p_trans + primary_loss;
+    let output_power = p_trans - secondary_loss;
     let efficiency_pct = if input_power > 0.0 {
-        100.0 * p_trans / input_power
+        100.0 * output_power / input_power
     } else {
         0.0
     };
@@ -668,9 +686,13 @@ fn loss_breakdown(theta: f64, c: &CircuitParams, e: &EddyCoefficients) -> LossBr
     LossBreakdown {
         theta_deg: theta.to_degrees(),
         transferred_power_w: p_trans,
+        output_power_w: output_power,
         required_ac_voltage_rms_v: u_rms,
+        coil_current_rms_a,
         input_power_w: input_power,
         total_loss_w: total_loss,
+        primary_loss_w: primary_loss,
+        secondary_loss_w: secondary_loss,
         efficiency_pct,
         coil_filter_loss_w: coil_filter_loss,
         capacitor_loss_w: capacitor_loss,
@@ -845,8 +867,56 @@ mod tests {
         assert!(result.optimum.theta_deg > 90.0);
         assert!(result.optimum.theta_deg < 180.0);
         assert!(result.optimum_loss.efficiency_pct > 0.0);
+        assert!((result.optimum_loss.transferred_power_w - 1000.0).abs() < 1.0e-9);
+        assert!(
+            (result.optimum_loss.output_power_w + result.optimum_loss.total_loss_w
+                - result.optimum_loss.input_power_w)
+                .abs()
+                < 1.0e-6
+        );
+        assert!(
+            (result.optimum_loss.input_power_w
+                - result.optimum_loss.transferred_power_w
+                - result.optimum_loss.primary_loss_w)
+                .abs()
+                < 1.0e-9
+        );
+        assert!(
+            (result.optimum_loss.output_power_w - result.optimum_loss.transferred_power_w
+                + result.optimum_loss.secondary_loss_w)
+                .abs()
+                < 1.0e-9
+        );
+        assert!(
+            (result.optimum_loss.efficiency_pct
+                - 100.0 * result.optimum_loss.output_power_w / result.optimum_loss.input_power_w)
+                .abs()
+                < 1.0e-9
+        );
+        let theta = result.optimum.theta_rad;
+        let eddy_index = result.coefficients.a
+            + result.coefficients.b * theta.cos()
+            + 2.0 * result.coefficients.c
+            + 2.0 * result.coefficients.d * theta.cos();
+        assert!(
+            (result.optimum_loss.eddy_loss_w
+                - result.optimum_loss.coil_current_rms_a.powi(2) * eddy_index)
+                .abs()
+                < 1.0e-9
+        );
         assert_eq!(result.numerical_grid.n_lambda, 640);
         assert!(result.estimated_mutual_inductance_h > 10.0e-6);
         assert!(result.estimated_mutual_inductance_h < 15.0e-6);
+    }
+
+    #[test]
+    fn accepts_legacy_input_power_field_as_transfer_power() {
+        let input: ModelInput = serde_json::from_value(serde_json::json!({
+            "circuit": {
+                "inputPowerW": 500.0
+            }
+        }))
+        .expect("legacy payload should deserialize");
+        assert_eq!(input.circuit.transferred_power_w, 500.0);
     }
 }

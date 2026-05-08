@@ -14,7 +14,7 @@ const inputIds = [
 
 const fieldHints = {
   frequencyKHz: "Operating frequency shared by the seawater eddy-current model and the LCC loss equations.",
-  powerW: "Fixed transferred output power used to scale voltage, current, and all loss terms.",
+  powerW: "Fixed coil-to-coil transferred power P = omega M I1 I2 sin(theta). The calculator solves coil current from this value.",
   conductivity: "Seawater conductivity. Larger values increase eddy-current loss and reduce skin depth.",
   epsilonR: "Relative permittivity of seawater used in the complex propagation term.",
   coilRadius: "Outer radius of the planar spiral coil. It affects the field kernel and the mutual-inductance estimate.",
@@ -96,6 +96,10 @@ function pct(value) {
 
 function watts(value) {
   return `${fmt(value, 2)} W`;
+}
+
+function amps(value) {
+  return `${fmt(value, 2)} A`;
 }
 
 function ms(value) {
@@ -181,6 +185,10 @@ function render(result) {
   document.getElementById("effOpt").textContent = pct(loss.efficiencyPct);
   document.getElementById("gainValue").textContent = `Δη = ${gain >= 0 ? "+" : ""}${fmt(gain, 2)}%`;
   document.getElementById("voltageValue").textContent = `${fmt(loss.requiredAcVoltageRmsV, 2)} V`;
+  document.getElementById("coilCurrentValue").textContent = amps(loss.coilCurrentRmsA);
+  document.getElementById("transferPowerValue").textContent = watts(loss.transferredPowerW);
+  document.getElementById("inputPowerValue").textContent = watts(loss.inputPowerW);
+  document.getElementById("outputPowerValue").textContent = watts(loss.outputPowerW);
   document.getElementById("mutualValue").textContent = `${fmt(result.usedMutualInductanceH * 1e6, 3)} uH`;
   document.getElementById("lambdaGridValue").textContent =
     `${result.numericalGrid.nLambda} / ${fmt(result.numericalGrid.lambdaMax, 0)}`;
@@ -193,10 +201,10 @@ function render(result) {
   }
   const mUh = result.usedMutualInductanceH * 1e6;
   const consistencyNote = mUh <= 3
-    ? "M is small for the selected target power; absolute efficiency may be low unless M, Lf, resistances, and power come from the same operating case."
-    : "Absolute efficiency is meaningful only when M, Lf, resistances, and target power come from the same operating case.";
+    ? "M is small for the selected transfer power; absolute efficiency may be low unless M, Lf, resistances, and power come from the same operating case."
+    : "Absolute efficiency is meaningful only when M, Lf, resistances, and transfer power come from the same operating case.";
   document.getElementById("summaryText").textContent =
-    `Solver: ${opt.method}. Stationarity residual: ${fmt(opt.residual, 3)}. Lambda step: ${fmt(result.numericalGrid.lambdaStep, 3)}. ${consistencyNote}`;
+    `Solver: ${opt.method}. Stationarity residual: ${fmt(opt.residual, 3)}. Lambda step: ${fmt(result.numericalGrid.lambdaStep, 3)}. Fixed transfer-power basis with symmetric primary/secondary loss split. ${consistencyNote}`;
 
   renderLossBars(loss);
   renderTables(result);

@@ -38,6 +38,7 @@ entry point used by tests and by the browser binding.
 | $h$ | `EddyParams::coil_gap_m` | Coil gap and middle seawater region height. |
 | $r_\mathrm{sea}$ | `EddyParams::seawater_radius_m` | Radial integration limit. |
 | $h_\mathrm{side}$ | `EddyParams::side_height_m` | One-side external seawater region height. |
+| $P_\mathrm{trans}$ | `CircuitParams::transferred_power_w` | Fixed coil-to-coil transferred power used to solve coil RMS current. |
 | $L_f$ | `CircuitParams::filter_inductance_h` | LCC filter inductance. |
 | $M$ | `CircuitParams::mutual_inductance_h` | Overwritten by the estimate when auto-estimation is enabled. |
 | $R$ | `CircuitParams::coil_resistance_ohm` | Coil resistance term. |
@@ -282,59 +283,63 @@ calculate_model:
 
 Implemented by `loss_breakdown`.
 
-Fixed transferred power relation:
+Fixed transfer-power relation:
+
+$$
+I=\frac{U}{\omega L_f}
+$$
 
 $$
 P_\mathrm{trans}=
-\frac{MU^2\sin\theta}{\omega L_f^2}
+\omega M I^2\sin\theta
 $$
-
-$$
-U^2=
-\frac{P_\mathrm{trans}\omega L_f^2}{M\sin\theta}
-$$
-
-Rust location:
-
-```text
-loss_breakdown:
-  u2 = p_trans * omega * lf * lf / (m * sin_theta)
-  u_rms = sqrt(u2)
-```
 
 Loss terms:
 
 $$
 P_\mathrm{coil/filter} =
-\frac{2U^2(L_f^2R+M^2R_f)}{\omega^2L_f^4}
+2I^2\frac{L_f^2R+M^2R_f}{L_f^2}
 $$
 
 $$
 P_\mathrm{cap} =
-\frac{2U^2\left[(M^2+L_f^2+2ML_f\cos\theta)R_{cf}
-+R_cL_f^2\right]}{\omega^2L_f^4}
+2I^2\frac{(M^2+L_f^2+2ML_f\cos\theta)R_{cf}
++R_cL_f^2}{L_f^2}
 $$
 
 $$
 P_\mathrm{eddy} =
-\frac{U^2K_\mathrm{eddy}(\theta)}{L_f^2\omega^2}
+I^2K_\mathrm{eddy}(\theta)
 $$
 
 $$
 P_\mathrm{mosfet} =
-\frac{4M^2U^2R_\mathrm{dson}}{\omega^2L_f^4}
+4I^2\frac{M^2R_\mathrm{dson}}{L_f^2}
 $$
 
 Rust location:
 
 ```text
 loss_breakdown:
+  transfer_coeff = omega * M * sin(theta)
+  coil_filter_coeff
+  capacitor_coeff
+  eddy_coeff = K_eddy(theta)
+  mosfet_coeff
+  current_squared = transferred_power / transfer_coeff
+  coil_current_rms_a = sqrt(current_squared)
+  u_rms = coil_current_rms_a * omega * Lf
+  p_trans = current_squared * transfer_coeff
   coil_filter_loss
   capacitor_loss
-  eddy_loss
+  eddy_loss = current_squared * eddy_coeff
   mosfet_loss
   total_loss
-  efficiency_pct = 100 * P_trans / (P_trans + total_loss)
+  primary_loss = total_loss / 2
+  secondary_loss = total_loss / 2
+  input_power = p_trans + primary_loss
+  output_power = p_trans - secondary_loss
+  efficiency_pct = 100 * output_power / input_power
 ```
 
 Displayed percentages:
@@ -346,7 +351,7 @@ $$
 
 $$
 \mathrm{input\ share} =
-\frac{P_i}{P_\mathrm{trans}+P_\mathrm{loss}}
+\frac{P_i}{P_\mathrm{in}}
 $$
 
 ## Optimal Angle

@@ -21,7 +21,7 @@
         <h2>Operating Point</h2>
         <div class="field-grid">
           <label>Frequency kHz<input id="frequencyKHz" type="number" value="200" min="1" step="1"></label>
-          <label>Target Transfer Power W<input id="powerW" type="number" value="1000" min="1" step="50"></label>
+          <label>Coil Transfer Power W<input id="powerW" type="number" value="1000" min="1" step="50"></label>
         </div>
       </section>
 
@@ -114,6 +114,22 @@
           <strong id="voltageValue">--</strong>
         </div>
         <div class="comparison-card">
+          <span>Coil RMS Current</span>
+          <strong id="coilCurrentValue">--</strong>
+        </div>
+        <div class="comparison-card">
+          <span>Coil Transfer Power</span>
+          <strong id="transferPowerValue">--</strong>
+        </div>
+        <div class="comparison-card">
+          <span>Source Input Power</span>
+          <strong id="inputPowerValue">--</strong>
+        </div>
+        <div class="comparison-card">
+          <span>Load Output Power</span>
+          <strong id="outputPowerValue">--</strong>
+        </div>
+        <div class="comparison-card">
           <span>Mutual Inductance Used</span>
           <strong id="mutualValue">--</strong>
         </div>
@@ -153,7 +169,7 @@
         <section class="panel">
           <h2>Loss Breakdown</h2>
           <table>
-            <thead><tr><th>Loss Term</th><th>W</th><th>Input Power Share</th></tr></thead>
+            <thead><tr><th>Loss Term</th><th>W</th><th>Source Input Share</th></tr></thead>
             <tbody id="lossRows"></tbody>
           </table>
         </section>

@@ -4,7 +4,10 @@
 
 - `frequencyHz`: common operating frequency for the eddy-current model and LCC
   network.
-- `transferredPowerW`: target transferred output power used to scale losses.
+- `transferredPowerW`: fixed coil-to-coil transferred power
+  `P = omega * M * I1 * I2 * sin(theta)`. In the symmetric case, the
+  calculator solves `I1 = I2`, then estimates source input power and load
+  output power from a symmetric primary/secondary loss split.
 
 ## Seawater And Coil Geometry
 

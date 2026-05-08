@@ -196,61 +196,87 @@ enter manual values for convergence studies.
 ## Loss Model
 
 The calculator assumes symmetric primary and secondary sides, double-sided LCC
-compensation, and a fixed target transferred power. Absolute efficiency is
-meaningful only when `M`, `Lf`, resistances, and target power come from the
-same physical design.
+compensation, and a fixed coil-to-coil transferred power. Absolute efficiency
+is meaningful only when `M`, `Lf`, resistances, and transferred power come from
+the same physical design.
 
-For a given angle:
+For a given angle, the coil RMS current is:
+
+$$
+I=\frac{U}{\omega L_f}
+$$
+
+and the transferred power is:
 
 $$
 P_\mathrm{trans}=
-\frac{MU^2\sin\theta}{\omega L_f^2}
-$$
-
-so:
-
-$$
-U^2=
-\frac{P_\mathrm{trans}\omega L_f^2}{M\sin\theta}
+\omega M I^2\sin\theta
 $$
 
 The loss terms are:
 
 $$
 P_\mathrm{coil/filter} =
-\frac{2U^2(L_f^2R+M^2R_f)}{\omega^2L_f^4}
+2I^2\frac{L_f^2R+M^2R_f}{L_f^2}
 $$
 
 $$
 P_\mathrm{cap} =
-\frac{2U^2\left[(M^2+L_f^2+2ML_f\cos\theta)R_{cf}
-+R_cL_f^2\right]}{\omega^2L_f^4}
+2I^2\frac{(M^2+L_f^2+2ML_f\cos\theta)R_{cf}
++R_cL_f^2}{L_f^2}
 $$
 
 $$
 P_\mathrm{eddy} =
-\frac{U^2K_\mathrm{eddy}(\theta)}{L_f^2\omega^2}
+I^2K_\mathrm{eddy}(\theta)
 $$
 
 $$
 P_\mathrm{mosfet} =
-\frac{4M^2U^2R_\mathrm{dson}}{\omega^2L_f^4}
+4I^2\frac{M^2R_\mathrm{dson}}{L_f^2}
 $$
 
-The total loss and efficiency are:
+The implementation solves the coil RMS current from the transferred-power
+constraint:
+
+$$
+I^2=
+\frac{P_\mathrm{trans}}{\omega M\sin\theta}
+$$
+
+The displayed source input and load output powers are then estimated by
+splitting the symmetric total losses equally between the primary and secondary
+sides:
 
 $$
 P_\mathrm{loss} =
-P_\mathrm{coil/filter}+P_\mathrm{cap}+P_\mathrm{eddy}+P_\mathrm{mosfet}
+P_\mathrm{coil/filter}
++P_\mathrm{cap}
++P_\mathrm{eddy}
++P_\mathrm{mosfet}
 $$
+
+$$
+P_\mathrm{in} =
+P_\mathrm{trans}
++\frac{P_\mathrm{loss}}{2}
+$$
+
+$$
+P_\mathrm{out} =
+P_\mathrm{trans}
+-\frac{P_\mathrm{loss}}{2}
+$$
+
+The displayed efficiency is then:
 
 $$
 \eta =
-\frac{P_\mathrm{trans}}{P_\mathrm{trans}+P_\mathrm{loss}}
+\frac{P_\mathrm{out}}{P_\mathrm{in}}
 $$
 
 The UI reports both each loss term's share of total loss and its share of total
-input power.
+source input power.
 
 ## Optimal Angle
 

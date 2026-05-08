@@ -15,15 +15,20 @@ loss breakdown. The computation is not based on precomputed `A/B/C/D` tables.
 - Compensation capacitor loss
 - Seawater eddy-current loss
 - MOSFET conduction loss
-- Efficiency at $\theta=\frac{\pi}{2}$ and at the optimized angle
-- Loss percentages relative to total loss and input power
+- Efficiency at $\theta=\frac{\pi}{2}$ and at the optimized angle, using a
+  fixed coil-to-coil transfer-power basis
+- Coil RMS current used to scale the `A/B/C/D` eddy-current coefficients
+- Source input power and load output power estimated from a symmetric
+  primary/secondary loss split
+- Loss percentages relative to total loss and source input power
 - Optional automatic mutual-inductance estimate from coil radius, turn count,
   turn spacing, and coil gap
 - Automatic `lambda` grid recommendation for large integration domains
 
-Absolute efficiency depends strongly on the circuit parameters. The web UI
-therefore estimates `M` by default from coil geometry and still allows manual
-override when measured or FEM-extracted values are available.
+Absolute efficiency depends strongly on the circuit parameters and selected
+transfer power. The web UI therefore estimates `M` by default from coil
+geometry and still allows manual override when measured or FEM-extracted values
+are available.
 
 ## Repository Layout
 
